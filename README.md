@@ -1,45 +1,71 @@
-# 个人科研工作流 · Codex × ChatGPT
+# research-workflow
 
-选一篇你真正想弄懂的论文，挑出其中一张图、一行数字或一个推导。读完后，能否关掉论文，解释它为什么成立，再亲手把它做出来？
+> A Codex skill that organizes a research project into a fixed file structure,
+> so both you and every fresh agent window know where to read context and where to
+> write results. **中文说明在下面。**
 
-## 从一项真实复现开始
+用 Agent 协作做科研的项目工作流，做成了 Codex skill。
 
-第一次使用，建议先给自己两分钟：如果四组数据的回归直线和 R² 几乎相同，你对四张散点图有什么预测？把预测写下来，再运行示例。需要 Git 和 Python 3.8+，脚本仅使用标准库。
+核心想法很简单：**科研项目里人和 Agent 的协作，靠一套固定的文件结构来承载**——
+每个文档职责单一，每个新开的 Agent 窗口都知道先读什么、往哪写。
 
-```sh
-git clone https://github.com/TigerSillion/research-workflow.git
-cd research-workflow
-python examples/anscombe/reproduce.py
+## 安装
+
+```bash
+git clone https://github.com/TigerSillion/research-workflow.git ~/.agents/skills/research-workflow
 ```
 
-Windows 也可用 `py -3`，Linux/macOS 可用 `python3`。终端会输出四组拟合值和判定；打开生成的 `examples/anscombe/output/figure.svg` 看哪里猜错了。[案例、数据出处和结果解读](examples/anscombe/README.md)
+在 ChatGPT 中接续已有课题时，提供课题的 `AGENTS.md` 和 `handoff.md`，再附上本轮要讨论的材料。
 
-## 用自己的问题开题
+装完对 Codex 说「开个新坑做 X」，它会问你三个问题（项目名、目标、领域术语），
+然后把整套结构建好。
 
-```sh
-python scripts/new_study.py "../studies/my-first-paper" --question "作者图 2 的效应在什么条件下成立？"
+## 文件结构
+
+```
+你的项目/
+├── AGENTS.md              项目总纲：在做什么、硬规矩 —— 每个新窗口第一个读
+├── handoff.md             进度交接 —— 每个窗口结束前更新，下一个窗口靠它接上
+├── brainstorm.md          问题和假设的讨论记录，倒序
+├── related_work/          文献，每篇 paper.pdf + source/
+├── 复现/                   baseline 复现 + 复现报告
+├── experiment/
+│   ├── results.md         每版实验一行，不覆盖不删
+│   └── evaluation.md      标准化测评，防止临时挑指标
+└── DataSet/ + dataset.md  数据和处理说明
 ```
 
-用 Codex 打开新建的课题目录，发一句「读 AGENTS.md 和 handoff.md，从下一项开始」。在 ChatGPT 中可以上传同两份文件，以及这次要读的论文或最新结果。将讨论中形成的预测、证据或改动交回 Codex 写入课题文件，即可跨工具接续。
+## 两个脚本
 
-| 阶段 | 本轮实际要做的事 | 留下什么 |
-|---|---|---|
-| 定题和读文献 | 选一个能被数据推翻的主张，定位原文图表；顺引一个基础方法，逆查一次质疑或复现 | `question.md`、`sources.md` |
-| 学懂方法 | 自己画因果链、写公式或伪代码，闭卷解释；让 ChatGPT 追问假设与反例 | `learning.md` |
-| 重建基线 | 填数据版本、切分、参数、单位和计算口径；写下预期值、容差和理由 | `protocol.md` |
-| 运行与质疑 | 用 Codex 执行命令并保留输出；先查输入与中间量，再查最终数字 | `runs.md`、`artifacts/` |
-| 探索和交接 | 每次只改变一个有解释力的条件，保留负结果；标明哪些结论能迁移 | `report.md`、`handoff.md` |
+**建骨架**（幂等，已有文件不覆盖）：
 
-没有作者代码时按方法章节独立实现，注明自行补足的假设。理论课题可把数值基线换成“小规模特例＋独立推导”；实验科学可用公开测量数据重做分析，并单列需要设备才能验证的部分。
+```bash
+bash ~/.agents/skills/research-workflow/scripts/init-project.sh ~/Code/my-paper
+```
 
-## 交给哪一个工具
+**抓论文**（PDF + LaTeX 源码都下，源码自动清洗——隔离作者打包进来的旧稿、剥掉注释掉的正文）：
 
-- **ChatGPT 适合讨论。** 例如「围绕论文图 2 只问我三个问题，让我解释观察量、隐藏假设和一个可能反例。等我回答后再指出漏洞。」
-- **Codex 适合执行。** 例如「读 protocol.md，先复核输入版本和指标口径，运行最小复现，把命令、实测值和差值追加到 runs.md。运行失败也记录原始报错。」
-- **人来做科研判断。** 看结果前写预测；出现分歧时回到原文和原始数据。将自己的解释、证据支持到哪里、下一个区分性实验分别写清楚。
+```bash
+bash ~/.agents/skills/research-workflow/scripts/fetch-paper.sh 2301.11305 detectgpt
+```
 
-[工具接力与研究提示词](guide.md) · [仓库级 Codex 指令](AGENTS.md) · [可选的工具说明文件](SKILL.md)
+## 工作节奏
 
-## 设计来源
+```
+抓文献 → 复现关键 baseline → 提假设 → 跑实验 → （循环）
+```
 
-参考 [skJack/research-workflow](https://github.com/skJack/research-workflow) 的固定课题目录、文献整理、基线复现、逐次实验记录和跨会话交接。本仓库针对 Codex 与 ChatGPT 重新编写流程、模板、Python 脚本与示例。
+复现放在提假设之前：论文只报平均值和成功配置，
+真正的问题往往在自己跑一遍才看得见的地方。
+
+## 内置的几条警示
+
+- 效果突然变好，先查数据泄漏（split 是不是按样本分了）
+- verify 中间过程，不只是看代码——小问题都藏在输入输出的处理里
+- 每一版实验都命名、都留着，失败的也留
+- 测评照 `evaluation.md` 走，不临时挑指标
+- 上下文快满就更新 `handoff.md`，别硬撑到被截断
+
+## License
+
+Apache License 2.0。源自 [skJack/research-workflow](https://github.com/skJack/research-workflow)，本版仅调整本页的工具使用说明。
